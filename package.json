@@ -1,0 +1,15 @@
+
+{
+  "name": "study-buddy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs",
+    "test:ai": "node --env-file=.env test.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "express": "^5.1.0"
+  }
+}
