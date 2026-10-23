@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Buddy</title>
+<style>
+  :root{--bg:#f5f1e8;--card:#fffdf7;--ink:#26241f;--muted:#7a766b;--line:#ddd6c3;--acc:#0f7b6c;--acc-ink:#fff;
+        --ok:#2e8b57;--bad:#c0392b;--okbg:#e2f4ea;--badbg:#fbe5e1;color-scheme:light}
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#14171a;--card:#1d2226;--ink:#eae7df;--muted:#98a0a5;--line:#323a40;--acc:#3cc5b0;--acc-ink:#07211d;
+          --ok:#5fd18c;--bad:#ff8a7a;--okbg:#173326;--badbg:#3a1e1a;color-scheme:dark}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.5;padding:16px}
+  main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  h1{margin:0;font-family:Georgia,serif;font-size:1.8rem}
+  h2{margin:0 0 8px;font-size:1.05rem}
+  .sub{margin:0;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  textarea,input[type=text],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+  textarea{min-height:150px;resize:vertical}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row.sb{justify-content:space-between}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:.55em 1em}
+  button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+  .small{font-size:.85rem;color:var(--muted)}
+  .tabs{display:flex;gap:6px}.tabs button{flex:1;font-weight:600;padding:.55em .3em}
+  .tabs button[aria-selected=true]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+  [hidden]{display:none!important}
+  .q{font-size:1.1rem;font-weight:600;margin:6px 0 12px}
+  .opt{display:block;width:100%;text-align:left;margin-bottom:8px;padding:.7em 1em}
+  .opt.ok{background:var(--okbg);border-color:var(--ok)}.opt.bad{background:var(--badbg);border-color:var(--bad)}
+  .exp{margin-top:8px;padding:10px;border-radius:8px;background:var(--bg);border:1px dashed var(--line)}
+  .prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:6px}
+  .prog i{display:block;height:100%;background:var(--acc);width:0;transition:width .3s}
+  .flash{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;min-height:190px;margin:10px 0;
+         padding:18px;font-size:1.15rem;text-align:center;background:var(--bg);border:2px solid var(--line);border-radius:14px}
+  .flash .tag{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .chat{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;padding:4px 2px 8px}
+  .m{max-width:88%;padding:9px 12px;border-radius:12px;white-space:pre-wrap;word-wrap:break-word}
+  .m.u{align-self:flex-end;background:var(--acc);color:var(--acc-ink)}
+  .m.a{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+  .src{align-self:flex-start;font-size:.78rem;color:var(--muted);margin:-4px 0 2px 4px}
+  .err{color:var(--bad)}
+  .big{font-size:2.2rem;font-family:Georgia,serif;margin:4px 0}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+  .stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:1.5rem;font-family:Georgia,serif}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:110px;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin-bottom:12px}
+  .bar{flex:1;background:var(--acc);border-radius:4px 4px 0 0;min-height:3px;position:relative}
+  .bar span{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:.7rem;color:var(--muted)}
+  ul.miss{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Study Buddy</h1>
+    <p class="sub">Paste your notes or load a file, then take a quiz, flip flashcards or ask questions about them.</p>
+  </div>
+
+  <div class="card">
+    <label for="notes"><b>Your notes</b></label>
+    <textarea id="notes" placeholder="Paste lecture notes, a chapter summary, or any text you want to learn..."></textarea>
+    <div class="row sb" style="margin-top:8px">
+      <div class="row">
+        <button id="file">Load .txt / .md / .pdf file</button>
+        <button id="sample">Try sample notes</button>
+        <input type="file" id="fin" accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf" hidden>
+      </div>
+      <span class="small" id="count">0 characters</span>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tQuiz" aria-selected="true">Quiz</button>
+    <button role="tab" id="tCards" aria-selected="false">Flashcards</button>
+    <button role="tab" id="tChat" aria-selected="false">Ask notes</button>
+    <button role="tab" id="tProg" aria-selected="false">Progress</button>
+  </div>
+
+  <!-- QUIZ -->
+  <section id="pQuiz" class="card">
+    <div id="qSetup">
+      <input type="text" id="qtopic" placeholder="Optional topic for long notes, e.g. Krebs cycle" style="margin-bottom:8px">
+      <div class="row">
+        <label for="qn" class="small">Questions</label>
+        <select id="qn" style="width:auto"><option>3</option><option selected>5</option><option>8</option><option>10</option></select>
+        <button class="p" id="gen">Generate quiz</button>
+      </div>
+      <p class="small" id="qMsg" style="margin-bottom:0"></p>
+    </div>
+    <div id="qPlay" hidden>
+      <div class="prog"><i id="qp"></i></div>
+      <div class="small" id="qc"></div>
+      <div class="q" id="qq"></div>
+      <div id="qo"></div>
+      <div class="exp" id="qe" hidden></div>
+      <div class="row" style="margin-top:10px"><button class="p" id="qnext" hidden>Next</button></div>
+    </div>
+    <div id="qDone" hidden style="text-align:center">
+      <div class="big" id="qs"></div>
+      <p id="qsum" class="sub"></p>
+      <button class="p" id="again">New quiz</button>
+    </div>
+  </section>
+
+  <!-- FLASHCARDS -->
+  <section id="pCards" class="card" hidden>
+    <div id="fSetup">
+      <input type="text" id="ftopic" placeholder="Optional topic for long notes, e.g. Calvin cycle" style="margin-bottom:8px">
+      <div class="row">
+        <label for="fn" class="small">Cards</label>
+        <select id="fn" style="width:auto"><option>6</option><option selected>10</option><option>15</option><option>20</option></select>
+        <button class="p" id="fgen">Generate flashcards</button>
+      </div>
+      <p class="small" id="fMsg" style="margin-bottom:0"></p>
+    </div>
+    <div id="fPlay" hidden>
+      <div class="prog"><i id="fp"></i></div>
+      <div class="small" id="fc"></div>
+      <button class="flash" id="card" aria-live="polite"><span class="tag" id="ctag">Question</span><span id="ctext"></span></button>
+      <p class="small" style="text-align:center;margin:0 0 10px">Click the card to flip it, then say how you did</p>
+      <div class="row" style="justify-content:center">
+        <button id="fagain" disabled>Review again</button>
+        <button class="p" id="fgot" disabled>Got it</button>
+      </div>
+    </div>
+    <div id="fDone" hidden style="text-align:center">
+      <div class="big" id="fs"></div>
+      <p id="fsum" class="sub"></p>
+      <button class="p" id="fnew">New deck</button>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <section id="pChat" class="card" hidden>
+    <div class="chat" id="log" aria-live="polite">
+      <div class="m a">Ask me anything about your notes. I will stick to what is in them.</div>
+    </div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap">
+      <input type="text" id="ci" placeholder="e.g. Explain the main idea in simple terms">
+      <button class="p" id="send">Send</button>
+      <button id="stop" hidden>Stop</button>
+    </div>
+    <div style="margin-top:8px"><button id="clearChat" class="small">Clear chat</button></div>
+  </section>
+
+  <!-- PROGRESS -->
+  <section id="pProg" class="card" hidden>
+    <div class="stats" id="stats"></div>
+    <h2>Last quizzes</h2>
+    <div class="bars" id="bars"></div>
+    <h2>Questions you miss most</h2>
+    <div id="missed" class="small"></div>
+    <div style="margin-top:12px"><button id="clearProg">Clear my progress</button></div>
+    <p class="small">Progress is saved only in this browser.</p>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let quiz = [], qi = 0, score = 0, answered = false, qMissed = [], qTopic = "";
+let deck = [], deckTotal = 0, got = 0, again = 0, flipped = false;
+let history = [], ctl = null;
+
+const SAMPLE = "Photosynthesis is the process plants, algae and some bacteria use to turn light energy into chemical energy stored in glucose. It happens mainly in chloroplasts, which contain the green pigment chlorophyll. The light-dependent reactions occur in the thylakoid membranes: light splits water molecules, releasing oxygen and producing ATP and NADPH. The Calvin cycle takes place in the stroma, where the enzyme RuBisCO fixes carbon dioxide and, using ATP and NADPH, builds sugars. The overall equation is 6CO2 + 6H2O + light -> C6H12O6 + 6O2. Factors that limit the rate include light intensity, carbon dioxide concentration and temperature.";
+
+// ---------- Talking to the server ----------
+function getCode() { try { return sessionStorage.getItem("sb-code") || ""; } catch (e) { return ""; } }
+async function apiFetch(url, body, signal) {
+  const send = () => fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-access-code": getCode() },
+    body: JSON.stringify(body),
+    signal,
+  });
+  let r = await send();
+  if (r.status === 401) {
+    const c = prompt("This app needs an access code:");
+    if (c) { try { sessionStorage.setItem("sb-code", c); } catch (e) {} r = await send(); }
+  }
+  return r;
+}
+async function readJSON(r) {
+  const text = await r.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) {}
+  if (!r.ok || !data) {
+    throw new Error((data && data.error) ||
+      `Server problem (HTTP ${r.status}). Check that the server is running and that you opened the app from its own address.`);
+  }
+  return data;
+}
+async function postJSON(url, body) { return readJSON(await apiFetch(url, body)); }
+
+// ---------- Notes ----------
+$("notes").value = store.get("studybuddy-notes-v2", "");
+function updateCount() {
+  const n = $("notes").value.length;
+  $("count").textContent = n + " characters" +
+    (n > 500000 ? " (only the first 500,000 are used)" : n > 8000 ? " (long notes: the app picks the relevant sections)" : "");
+  store.set("studybuddy-notes-v2", $("notes").value);
+}
+$("notes").addEventListener("input", updateCount);
+updateCount();
+function notesOk() { return $("notes").value.trim().length >= 80; }
+
+$("file").onclick = () => $("fin").click();
+$("fin").onchange = async function () {
+  const f = this.files[0]; if (!f) return;
+  const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
+  try {
+    if (isPdf) {
+      if (!window.pdfjsLib) throw new Error("PDF reader did not load. Check your internet connection and refresh the page.");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      $("count").textContent = "Reading PDF...";
+      const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+      let text = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map((it) => it.str + (it.hasEOL ? "\n" : " ")).join("") + "\n\n";
+      }
+      if (text.trim().length < 20) throw new Error("No text found. This PDF may be scanned images.");
+      $("notes").value = text.trim();
+    } else {
+      $("notes").value = await f.text();
+    }
+    updateCount();
+  } catch (e) {
+    updateCount();
+    $("count").textContent = e.message || "Could not read that file.";
+  }
+  this.value = "";
+};
+$("sample").onclick = () => { $("notes").value = SAMPLE; updateCount(); };
+
+// ---------- Tabs ----------
+const TABS = { Quiz: "pQuiz", Cards: "pCards", Chat: "pChat", Prog: "pProg" };
+function showTab(name) {
+  for (const k in TABS) {
+    $("t" + k).setAttribute("aria-selected", k === name);
+    $(TABS[k]).hidden = k !== name;
+  }
+  if (name === "Prog") renderProgress();
+}
+for (const k in TABS) $("t" + k).onclick = () => showTab(k);
+
+// ---------- Progress storage ----------
+function loadProg() { return store.get("studybuddy-progress", { results: [], misses: {} }); }
+function saveQuizResult(s, total, topic, missed) {
+  const p = loadProg();
+  p.results.push({ kind: "quiz", s, total, topic, t: Date.now() });
+  p.results = p.results.slice(-100);
+  missed.forEach((q) => { p.misses[q] = (p.misses[q] || 0) + 1; });
+  const keep = Object.entries(p.misses).sort((a, b) => b[1] - a[1]).slice(0, 50);
+  p.misses = Object.fromEntries(keep);
+  store.set("studybuddy-progress", p);
+}
+function saveCardResult(total, rounds) {
+  const p = loadProg();
+  p.results.push({ kind: "cards", total, rounds, t: Date.now() });
+  p.results = p.results.slice(-100);
+  store.set("studybuddy-progress", p);
+}
+function stat(label, value) {
+  const d = document.createElement("div"); d.className = "stat";
+  const b = document.createElement("b"); b.textContent = value;
+  d.append(b, document.createTextNode(label)); return d;
+}
+function renderProgress() {
+  const p = loadProg();
+  const quizzes = p.results.filter((r) => r.kind === "quiz");
+  const decks = p.results.filter((r) => r.kind === "cards").length;
+  const pct = (r) => Math.round(r.s / r.total * 100);
+  const avg = quizzes.length ? Math.round(quizzes.reduce((a, r) => a + pct(r), 0) / quizzes.length) : 0;
+  const bestScore = quizzes.length ? Math.max(...quizzes.map(pct)) : 0;
+  $("stats").replaceChildren(
+    stat("Quizzes taken", quizzes.length),
+    stat("Average score", quizzes.length ? avg + "%" : "-"),
+    stat("Best score", quizzes.length ? bestScore + "%" : "-"),
+    stat("Flashcard decks", decks)
+  );
+  const bars = $("bars"); bars.replaceChildren();
+  const last = quizzes.slice(-10);
+  if (!last.length) { bars.textContent = "Take a quiz to see your scores here."; bars.className = "bars small"; }
+  else {
+    bars.className = "bars";
+    last.forEach((r) => {
+      const b = document.createElement("div"); b.className = "bar";
+      b.style.height = Math.max(3, pct(r) * 0.8) + "px";
+      b.title = `${r.s}/${r.total}` + (r.topic ? " - " + r.topic : "");
+      const s = document.createElement("span"); s.textContent = pct(r) + "%";
+      b.appendChild(s); bars.appendChild(b);
+    });
+  }
+  const miss = Object.entries(p.misses).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const box = $("missed"); box.replaceChildren();
+  if (!miss.length) box.textContent = "Nothing yet. Questions you answer wrong will be listed here.";
+  else {
+    const ul = document.createElement("ul"); ul.className = "miss";
+    miss.forEach(([q, n]) => { const li = document.createElement("li"); li.textContent = `${q} (missed ${n}x)`; ul.appendChild(li); });
+    box.appendChild(ul);
+  }
+}
+$("clearProg").onclick = () => { if (confirm("Delete all saved progress?")) { store.set("studybuddy-progress", { results: [], misses: {} }); renderProgress(); } };
+
+// ---------- Quiz ----------
+$("gen").onclick = async () => {
+  const msg = $("qMsg"); msg.className = "small";
+  if (!notesOk()) { msg.textContent = "Add a bit more text first (at least a few sentences)."; return; }
+  $("gen").disabled = true; msg.textContent = "Writing your questions...";
+  try {
+    qTopic = $("qtopic").value.trim();
+    quiz = await postJSON("/api/quiz", { notes: $("notes").value, count: Number($("qn").value), topic: qTopic });
+    qi = 0; score = 0; qMissed = [];
+    $("qSetup").hidden = true; $("qDone").hidden = true; $("qPlay").hidden = false;
+    showQuestion();
+  } catch (e) { msg.className = "small err"; msg.textContent = e.message; }
+  $("gen").disabled = false;
+};
+function showQuestion() {
+  const q = quiz[qi]; answered = false;
+  $("qc").textContent = `Question ${qi + 1} of ${quiz.length} · Score ${score}`;
+  $("qp").style.width = (qi / quiz.length * 100) + "%";
+  $("qq").textContent = q.q;
+  $("qo").replaceChildren(); $("qe").hidden = true; $("qnext").hidden = true;
+  q.options.forEach((o, i) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.textContent = String.fromCharCode(65 + i) + ". " + o;
+    b.onclick = () => pick(i);
+    $("qo").appendChild(b);
+  });
+}
+function pick(i) {
+  if (answered) return; answered = true;
+  const q = quiz[qi], btns = $("qo").children;
+  if (i === q.answer) score++; else qMissed.push(q.q);
+  for (let j = 0; j < btns.length; j++) {
+    btns[j].disabled = true;
+    if (j === q.answer) btns[j].classList.add("ok");
+    else if (j === i) btns[j].classList.add("bad");
+  }
+  $("qe").textContent = (i === q.answer ? "Correct. " : "Not quite. ") + q.explanation;
+  $("qe").hidden = false;
+  $("qnext").textContent = qi === quiz.length - 1 ? "See results" : "Next";
+  $("qnext").hidden = false; $("qnext").focus();
+  $("qc").textContent = `Question ${qi + 1} of ${quiz.length} · Score ${score}`;
+}
+$("qnext").onclick = () => {
+  qi++;
+  if (qi < quiz.length) { showQuestion(); return; }
+  $("qPlay").hidden = true; $("qDone").hidden = false;
+  const pct = Math.round(score / quiz.length * 100);
+  $("qs").textContent = `${score} / ${quiz.length}`;
+  $("qsum").textContent = pct >= 80 ? "Excellent. You know this material well."
+    : pct >= 50 ? "Good start. Review the explanations and try again."
+    : "Worth another read of your notes, then try a fresh quiz.";
+  saveQuizResult(score, quiz.length, qTopic, qMissed);
+};
+$("again").onclick = () => { $("qDone").hidden = true; $("qSetup").hidden = false; $("qMsg").textContent = ""; };
+
+// ---------- Flashcards ----------
+$("fgen").onclick = async () => {
+  const msg = $("fMsg"); msg.className = "small";
+  if (!notesOk()) { msg.textContent = "Add a bit more text first (at least a few sentences)."; return; }
+  $("fgen").disabled = true; msg.textContent = "Making your flashcards...";
+  try {
+    deck = await postJSON("/api/flashcards", { notes: $("notes").value, count: Number($("fn").value), topic: $("ftopic").value.trim() });
+    deckTotal = deck.length; got = 0; again = 0;
+    $("fSetup").hidden = true; $("fDone").hidden = true; $("fPlay").hidden = false;
+    showCard();
+  } catch (e) { msg.className = "small err"; msg.textContent = e.message; }
+  $("fgen").disabled = false;
+};
+function showCard() {
+  flipped = false;
+  $("ctag").textContent = "Question"; $("ctext").textContent = deck[0].front;
+  $("fgot").disabled = true; $("fagain").disabled = true;
+  $("fc").textContent = `${got} of ${deckTotal} learned · ${deck.length} left`;
+  $("fp").style.width = (got / deckTotal * 100) + "%";
+}
+$("card").onclick = () => {
+  if (!deck.length) return;
+  flipped = !flipped;
+  $("ctag").textContent = flipped ? "Answer" : "Question";
+  $("ctext").textContent = flipped ? deck[0].back : deck[0].front;
+  $("fgot").disabled = !flipped; $("fagain").disabled = !flipped;
+};
+$("fgot").onclick = () => {
+  deck.shift(); got++;
+  if (!deck.length) {
+    $("fPlay").hidden = true; $("fDone").hidden = false;
+    $("fs").textContent = `${deckTotal} / ${deckTotal}`;
+    $("fsum").textContent = again ? `Done, with ${again} review round${again === 1 ? "" : "s"}. Nice persistence.` : "Perfect run. You knew every card.";
+    saveCardResult(deckTotal, again);
+    return;
+  }
+  showCard();
+};
+$("fagain").onclick = () => { deck.push(deck.shift()); again++; showCard(); };
+$("fnew").onclick = () => { $("fDone").hidden = true; $("fSetup").hidden = false; $("fMsg").textContent = ""; };
+
+// ---------- Chat (streaming) ----------
+function bubble(cls, text) {
+  const d = document.createElement("div");
+  d.className = "m " + cls; d.textContent = text;
+  $("log").appendChild(d); $("log").scrollTop = $("log").scrollHeight;
+  return d;
+}
+async function send() {
+  const text = $("ci").value.trim(); if (!text) return;
+  if (!notesOk()) { bubble("a", "Please add some notes above first so I have something to work from."); return; }
+
+  $("ci").value = ""; bubble("u", text);
+  history.push({ role: "user", content: text });
+  const out = bubble("a", "...");
+  $("send").disabled = true; $("stop").hidden = false;
+  ctl = new AbortController();
+  let answer = "";
+
+  try {
+    const r = await apiFetch("/api/chat", { notes: $("notes").value, history: history.slice(-20) }, ctl.signal);
+    if (!r.ok || !r.body) await readJSON(r); // throws a readable error
+
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const parts = buf.split("\n\n"); buf = parts.pop();
+      for (const p of parts) {
+        const data = p.replace(/^data: /, "");
+        if (data === "[DONE]") continue;
+        const ev = JSON.parse(data);
+        if (typeof ev === "string") { answer += ev; out.textContent = answer; }
+        else if (ev && ev.sources) {
+          const note = document.createElement("div");
+          note.className = "src";
+          note.textContent = ev.total > ev.sources.length
+            ? `Used sections ${ev.sources.join(", ")} of ${ev.total}` : "Used all of your notes";
+          out.after(note);
+        }
+        $("log").scrollTop = $("log").scrollHeight;
+      }
+    }
+    history.push({ role: "assistant", content: answer || "(no answer)" });
+  } catch (e) {
+    if (e.name === "AbortError" && answer) {
+      history.push({ role: "assistant", content: answer });
+    } else {
+      history.pop();
+      out.textContent = e.name === "AbortError" ? "Stopped." : e.message;
+      out.classList.add("err");
+    }
+  }
+  $("send").disabled = false; $("stop").hidden = true; ctl = null;
+}
+$("send").onclick = send;
+$("ci").addEventListener("keydown", (e) => { if (e.key === "Enter" && !$("send").disabled) { e.preventDefault(); send(); } });
+$("stop").onclick = () => { if (ctl) ctl.abort(); };
+$("clearChat").onclick = () => {
+  if (ctl) ctl.abort();
+  history = [];
+  $("log").replaceChildren();
+  bubble("a", "Chat cleared. Ask me anything about your notes.");
+};
+</script>
+</body>
+</html>

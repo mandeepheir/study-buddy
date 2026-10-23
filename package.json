@@ -1,15 +1,20 @@
 
 {
   "name": "study-buddy",
-  "version": "1.0.0",
-  "private": true,
+  "version": "2.0.0",
+  "description": "Quiz yourself from your own notes, make flashcards and chat with your documents, powered by the free Gemini API.",
   "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "start": "node --env-file=.env server.mjs",
-    "test:ai": "node --env-file=.env test.mjs"
+    "start": "node --env-file=.env server.js",
+    "start:prod": "node server.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
-    "@google/genai": "^1.0.0",
-    "express": "^5.1.0"
+    "@google/genai": "latest",
+    "express": "^4.19.2"
   }
 }
